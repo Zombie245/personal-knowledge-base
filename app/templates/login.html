@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('login_title') }}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark d-flex align-items-center justify-content-center" style="min-height:100vh;">
+    <div class="card shadow" style="width:350px;">
+        <div class="card-body text-center p-4">
+            <h4 class="mb-4">{{ t('login_title') }}</h4>
+            {% if error %}
+                <div class="alert alert-danger py-2">{{ error }}</div>
+            {% endif %}
+            <form action="/login" method="post">
+                <input type="text"     name="username" class="form-control mb-3"
+                       placeholder="{{ t('login_placeholder') }}" required autofocus autocomplete="username">
+                <input type="password" name="password" class="form-control mb-3"
+                       placeholder="{{ t('password_placeholder') }}" required autocomplete="current-password">
+                <button type="submit" class="btn btn-primary w-100">{{ t('login_btn') }}</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

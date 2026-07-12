@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('app_title') }}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .tag-badge  { background:#2c3e50;color:#fff;border-radius:4px;padding:3px 6px;font-size:.8rem;margin-right:4px;display:inline-block;cursor:pointer;transition:.2s; }
+        .tag-badge:hover,.tag-active { background:#1abc9c !important; }
+        .status-badge { font-weight:bold;border-radius:4px;padding:4px 8px;font-size:.85rem; }
+        .status-В\.процесі  { background:#f39c12;color:#fff; }
+        .status-Оновлюється { background:#3498db;color:#fff; }
+        .status-Завершено   { background:#27ae60;color:#fff; }
+        .status-Закинуто    { background:#e74c3c;color:#fff; }
+        .sortable { cursor:pointer;user-select:none; }
+        .sortable:hover { text-decoration:underline; }
+        .item-icon { width:32px;height:32px;object-fit:contain;border-radius:4px;margin-right:10px;flex-shrink:0; }
+    </style>
+</head>
+<body class="bg-light pb-5">
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container">
+    <span class="navbar-brand fw-bold">{{ t('app_title') }}</span>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <div class="btn-group">
+        <a href="/lang/uk?active_tab={{ true_active | urlencode }}" class="btn btn-sm {% if lang=='uk' %}btn-light{% else %}btn-outline-light{% endif %}">UK</a>
+        <a href="/lang/en?active_tab={{ true_active | urlencode }}" class="btn btn-sm {% if lang=='en' %}btn-light{% else %}btn-outline-light{% endif %}">EN</a>
+        <a href="/lang/de?active_tab={{ true_active | urlencode }}" class="btn btn-sm {% if lang=='de' %}btn-light{% else %}btn-outline-light{% endif %}">DE</a>
+      </div>
+      {% if role == 'admin' %}
+        <a href="/admin/users"  class="btn btn-outline-light btn-sm">👥 {{ t('admin_panel') }}</a>
+        <a href="/backup/full"  class="btn btn-outline-info btn-sm">{{ t('full_backup') }}</a>
+        <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#restoreModal">{{ t('restore') }}</button>
+      {% endif %}
+      {% if role in ('admin', 'editor') %}
+        <a href="/add" class="btn btn-success btn-sm">{{ t('new_record') }}</a>
+      {% endif %}
+      <a href="/logout" class="btn btn-outline-light btn-sm">{{ t('logout') }}</a>
+    </div>
+  </div>
+</nav>
+
+{% if role == 'admin' %}
+<div class="modal fade" id="restoreModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form action="/backup/restore_full" method="post" enctype="multipart/form-data">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ t('restore_title') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" name="backup_file" class="form-control" accept=".zip" required>
+        <small class="text-danger mt-2 d-block">{{ t('restore_warning') }}</small>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-warning">{{ t('restore_btn') }}</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+
+<div class="container">
+{% if categorized_items %}
+
+  <div class="bg-white p-3 rounded shadow-sm border mb-4">
+    <div class="row align-items-center g-2">
+      <div class="col-md-6" id="filter-tags-bar" style="display:none">
+        <strong class="me-2">{{ t('filter_active_tags') }}</strong>
+        <span id="active-filters-list"></span>
+        <button class="btn btn-sm btn-link text-danger py-0" onclick="clearAllTags()">{{ t('filter_reset') }}</button>
+      </div>
+      {% if all_metrics %}
+      <div class="col-md-6 d-flex gap-2 align-items-center">
+        <select id="rating-metric" class="form-select form-select-sm w-auto">
+          <option value="">{{ t('filter_rating_metric') }}</option>
+          {% for m in all_metrics %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
+        <select id="rating-op" class="form-select form-select-sm w-auto">
+          <option value=">=">&ge;</option><option value="<=">&le;</option><option value="==">=</option>
+        </select>
+        <input type="number" id="rating-val" class="form-control form-control-sm" style="width:70px" placeholder="10">
+        <button class="btn btn-sm btn-secondary" onclick="applyFilters()">{{ t('filter_rating_apply') }}</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% set true_active = active_tab if active_tab in categorized_items
+                       else (categorized_items.keys()|first if categorized_items else '') %}
+
+  <ul class="nav nav-tabs mb-3">
+    {% for category in categorized_items %}
+    <li class="nav-item">
+      <button class="nav-link {% if category==true_active %}active{% endif %} fw-bold"
+              data-bs-toggle="tab" data-bs-target="#tab-{{ loop.index }}" type="button"
+              onclick="history.replaceState(null,'','/?active_tab={{ category|urlencode }}')">
+        {{ category }}
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div class="tab-content">
+  {% for category, cat_items in categorized_items.items() %}
+  {% set can_edit = tab_roles.get(category) == 'editor' %}
+  <div class="tab-pane fade {% if category==true_active %}show active{% endif %}" id="tab-{{ loop.index }}">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded shadow-sm border">
+      <input type="text" class="form-control form-control-sm w-50 search-input"
+             data-target="tbl-{{ loop.index }}" placeholder="{{ t('search_placeholder') }}">
+      {% if can_edit %}
+      <div class="btn-group">
+        <a href="/add?category={{ category|urlencode }}" class="btn btn-sm btn-outline-success">{{ t('add_here') }}</a>
+        {% if role == 'admin' %}
+        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+          {{ t('tab_settings') }}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:260px">
+          <li class="d-flex justify-content-between px-3 py-1 align-items-center bg-light border-bottom">
+            <form action="/tab/move" method="post" class="m-0">
+              <input type="hidden" name="category" value="{{ category }}">
+              <input type="hidden" name="direction" value="left">
+              <button class="btn btn-sm btn-outline-secondary px-2 py-0">◀</button>
+            </form>
+            <span class="text-muted small">{{ t('tab_move') }}</span>
+            <form action="/tab/move" method="post" class="m-0">
+              <input type="hidden" name="category" value="{{ category }}">
+              <input type="hidden" name="direction" value="right">
+              <button class="btn btn-sm btn-outline-secondary px-2 py-0">▶</button>
+            </form>
+          </li>
+          <li><a class="dropdown-item text-info mt-1" href="/backup/category/{{ category|urlencode }}">{{ t('tab_save_json') }}</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <form action="/auto_icons" method="post" class="m-0">
+              <input type="hidden" name="active_tab" value="{{ category }}">
+              <button type="submit" class="dropdown-item">{{ t('auto_icons') }}</button>
+            </form>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="#"
+                 data-bs-toggle="modal" data-bs-target="#renameModal-{{ loop.index }}">{{ t('rename_tab') }}</a></li>
+          <li><a class="dropdown-item text-danger" href="#"
+                 data-bs-toggle="modal" data-bs-target="#deleteModal-{{ loop.index }}">{{ t('delete_tab') }}</a></li>
+        </ul>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0" id="tbl-{{ loop.index }}">
+          <thead class="table-dark">
+            <tr>
+              <th class="ps-3 w-50 sortable" onclick="sortTable('tbl-{{ loop.index }}',0)">{{ t('col_name') }}</th>
+              <th class="sortable" onclick="sortTable('tbl-{{ loop.index }}',1)">{{ t('col_status') }}</th>
+              <th>{{ t('col_tags') }}</th>
+              <th class="text-end pe-3">{{ t('col_actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for item in cat_items %}
+          <tr class="searchable-row">
+            <td class="ps-3">
+              <div class="d-flex align-items-center mb-1">
+                {% if item.icon_file %}
+                  <img src="/icons/{{ item.icon_file }}" class="item-icon bg-light shadow-sm" alt="">
+                {% else %}
+                  <div class="item-icon bg-secondary d-flex align-items-center justify-content-center text-white fw-bold shadow-sm">
+                    {{ item.name[:1]|upper }}
+                  </div>
+                {% endif %}
+                <h6 class="mb-0 text-primary item-name">{{ item.name }}</h6>
+              </div>
+              <div class="small text-muted item-desc">{{ item.description|truncate(100) }}</div>
+            </td>
+            <td>
+              {% if item.status %}
+              <span class="status-badge status-{{ item.status.replace(' ','.') }}">{{ item.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% for tag in item.parsed_tags %}
+              <span class="tag-badge" onclick="toggleTag('{{ tag }}')">{{ tag }}</span>
+              {% endfor %}
+            </td>
+            <td class="text-end pe-3">
+              <button class="btn btn-sm btn-info text-white mb-1 w-100"
+                      data-bs-toggle="modal" data-bs-target="#modal-{{ item.id }}">{{ t('btn_details') }}</button>
+              {% if can_edit %}
+              <a href="/edit/{{ item.id }}" class="btn btn-sm btn-warning mb-1 w-100">{{ t('btn_edit') }}</a>
+              <form action="/delete/{{ item.id }}" method="post"
+                    onsubmit="return confirm('{{ t('btn_delete_confirm') }}')">
+                <button type="submit" class="btn btn-sm btn-danger w-100">{{ t('btn_delete') }}</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+
+          <div class="modal fade" id="modal-{{ item.id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg"><div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ item.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                {% if item.description %}
+                <p><strong>{{ t('modal_desc') }}:</strong><br>{{ item.description }}</p>
+                {% endif %}
+                {% if item.opinion %}
+                <p><strong>{{ t('modal_opinion') }}:</strong><br>{{ item.opinion }}</p>
+                {% endif %}
+                {% if item.install_instructions %}
+                <pre class="bg-dark text-light p-3 rounded" style="white-space:pre-wrap">{{ item.install_instructions }}</pre>
+                {% endif %}
+                {% if item.links %}
+                <div class="mt-2">
+                  {% for link in item.links %}
+                  <a href="{{ link.url }}" class="btn btn-sm btn-outline-primary me-1 mb-1" target="_blank" rel="noopener">
+                    🔗 {{ link.name }}
+                  </a>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div></div>
+          </div>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if role == 'admin' %}
+    <div class="modal fade" id="renameModal-{{ loop.index }}" tabindex="-1">
+      <div class="modal-dialog"><div class="modal-content">
+        <form action="/category/rename" method="post">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ t('rename_title') }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="old_name" value="{{ category }}">
+            <input type="text" name="new_name" class="form-control" value="{{ category }}" required>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">{{ t('save_btn') }}</button>
+          </div>
+        </form>
+      </div></div>
+    </div>
+
+    <div class="modal fade" id="deleteModal-{{ loop.index }}" tabindex="-1">
+      <div class="modal-dialog"><div class="modal-content">
+        <form action="/category/delete" method="post">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">{{ t('delete_tab_title') }}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" name="category_name" value="{{ category }}">
+            <p class="mb-0">{{ category }}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-danger">{{ t('btn_delete') }}</button>
+          </div>
+        </form>
+      </div></div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+  </div>
+
+{% else %}
+  <div class="alert alert-info">{{ t('empty_catalog') }}</div>
+{% endif %}
+</div>
+
+<script>
+let activeTags = [];
+
+function toggleTag(tag) {
+    activeTags = activeTags.includes(tag)
+        ? activeTags.filter(t => t !== tag)
+        : [...activeTags, tag];
+    applyFilters();
+}
+function clearAllTags() { activeTags = []; applyFilters(); }
+
+function applyFilters() {
+    const bar = document.getElementById('filter-tags-bar');
+    const list = document.getElementById('active-filters-list');
+    bar.style.display = activeTags.length ? '' : 'none';
+    list.innerHTML = activeTags.map(t =>
+        `<span class="tag-badge tag-active me-1">${t}</span>`).join('');
+
+    document.querySelectorAll('.searchable-row').forEach(row => {
+        const tableId  = row.closest('table').id;
+        const inp      = document.querySelector(`input[data-target="${tableId}"]`);
+        const search   = (inp ? inp.value : '').toLowerCase();
+        const nameText = row.querySelector('.item-name')?.innerText.toLowerCase() || '';
+        const descText = row.querySelector('.item-desc')?.innerText.toLowerCase() || '';
+        const rowTags  = [...row.querySelectorAll('.tag-badge')].map(el => el.innerText.trim());
+        const visible  = (nameText.includes(search) || descText.includes(search))
+                      && activeTags.every(t => rowTags.includes(t));
+        row.style.display = visible ? '' : 'none';
+    });
+}
+
+document.querySelectorAll('.search-input').forEach(inp =>
+    inp.addEventListener('input', applyFilters));
+
+function sortTable(tableId, col) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    const rows  = [...tbody.querySelectorAll('tr.searchable-row')];
+    const asc   = tbody.dataset.sortCol == col && tbody.dataset.sortDir == 'asc';
+    tbody.dataset.sortCol = col;
+    tbody.dataset.sortDir = asc ? 'desc' : 'asc';
+    rows.sort((a, b) => {
+        const at = a.cells[col]?.innerText.trim().toLowerCase() || '';
+        const bt = b.cells[col]?.innerText.trim().toLowerCase() || '';
+        return asc ? bt.localeCompare(at) : at.localeCompare(bt);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+</script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

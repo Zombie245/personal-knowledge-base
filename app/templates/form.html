@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('form_name') }}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .field-hint { font-size: .8rem; color: #6c757d; }
+    </style>
+</head>
+<body class="bg-light pb-5">
+
+{% set back_cat = item.category if item else prefill_category %}
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/?active_tab={{ back_cat | urlencode }}">← {{ t('app_title') }}</a>
+    <span class="text-light small">
+      {% if item %}{{ t('btn_edit') }}: {{ item.name }}{% else %}{{ t('new_record') }}{% endif %}
+    </span>
+  </div>
+</nav>
+
+<div class="container" style="max-width:820px">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <form action="/save" method="post" enctype="multipart/form-data">
+        {% if item %}<input type="hidden" name="item_id" value="{{ item.id }}">{% endif %}
+
+        {# ── Категорія / Статус / Версія ── #}
+        <div class="row g-3 mb-3">
+          <div class="col-md-5">
+            <label class="form-label fw-semibold">{{ t('form_category') }}</label>
+            <input type="text" list="catOpts" name="category" class="form-control"
+                   value="{{ item.category if item else prefill_category }}" required>
+            <datalist id="catOpts">
+              {% for cat in categories %}<option value="{{ cat }}">{% endfor %}
+            </datalist>
+          </div>
+
+          <div class="col-md-5">
+            <label class="form-label fw-semibold">{{ t('form_status') }}</label>
+            <select name="status" class="form-select">
+              <option value=""
+                {% if not item or not item.status %}selected{% endif %}>
+                {{ t('status_none') }}
+              </option>
+              <option value="В процесі"
+                {% if item and item.status == 'В процесі' %}selected{% endif %}>
+                🟡 {{ t('status_in_progress') }}
+              </option>
+              <option value="Оновлюється"
+                {% if item and item.status == 'Оновлюється' %}selected{% endif %}>
+                🔵 {{ t('status_updating') }}
+              </option>
+              <option value="Завершено"
+                {% if item and item.status == 'Завершено' %}selected{% endif %}>
+                🟢 {{ t('status_done') }}
+              </option>
+              <option value="Закинуто"
+                {% if item and item.status == 'Закинуто' %}selected{% endif %}>
+                🔴 {{ t('status_abandoned') }}
+              </option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ t('form_version') }}</label>
+            <input type="text" name="version" class="form-control"
+                   value="{{ item.version if item else '' }}" placeholder="1.0">
+          </div>
+        </div>
+
+        {# ── Назва ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('form_name') }}</label>
+          <input type="text" name="name" class="form-control"
+                 value="{{ item.name if item else '' }}" required>
+        </div>
+
+        {# ── Теги ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('form_tags') }}</label>
+          <input type="text" name="tags" class="form-control"
+                 value="{{ item.tags if item else '' }}"
+                 placeholder="{{ t('form_tags_placeholder') }}">
+          <div class="field-hint mt-1">{{ t('form_tags_hint') }}</div>
+        </div>
+
+        {# ── Опис ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('form_desc') }}</label>
+          <textarea name="description" class="form-control" rows="3">{{ item.description if item else '' }}</textarea>
+        </div>
+
+        {# ── Власна думка ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('modal_opinion') }}</label>
+          <textarea name="opinion" class="form-control" rows="2">{{ item.opinion if item else '' }}</textarea>
+        </div>
+
+        {# ── Інструкція ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('form_instructions') }}</label>
+          <textarea name="install_instructions" class="form-control font-monospace" rows="5">{{ item.install_instructions if item else '' }}</textarea>
+        </div>
+
+        {# ── Посилання ── #}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">{{ t('form_links') }}</label>
+          <textarea name="links_text" class="form-control font-monospace" rows="3"
+                    placeholder="{{ t('form_links_placeholder') }}">{{ item.links_text if item else '' }}</textarea>
+          <div class="field-hint mt-1">{{ t('form_links_hint') }}</div>
+        </div>
+
+        {# ── Рейтинги ── #}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">{{ t('form_ratings') }}</label>
+          <textarea name="ratings_text" class="form-control font-monospace" rows="4"
+                    placeholder="{{ t('form_ratings_placeholder') }}">{{ item.ratings_text if item else '' }}</textarea>
+          <div class="field-hint mt-1">{{ t('form_ratings_hint') }}</div>
+        </div>
+
+        {# ── Іконка ── #}
+        <div class="mb-4 p-3 bg-white rounded border">
+          <label class="form-label fw-semibold">{{ t('form_icon') }}</label>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            {% if item and item.icon_file %}
+              <img src="/icons/{{ item.icon_file }}"
+                   style="width:48px;height:48px;object-fit:contain;border-radius:6px;"
+                   class="border shadow-sm" alt="icon">
+              <div class="form-check mb-0">
+                <input type="checkbox" name="delete_icon" value="true"
+                       class="form-check-input" id="del_icon">
+                <label class="form-check-label text-danger" for="del_icon">{{ t('form_icon_delete') }}</label>
+              </div>
+            {% endif %}
+            <div class="flex-grow-1">
+              <input type="file" name="icon_upload" class="form-control form-control-sm"
+                     accept=".png,.jpg,.jpeg,.gif,.webp,.ico,.svg">
+              <div class="field-hint mt-1">{{ t('form_icon_hint') }}</div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Кнопки ── #}
+        <div class="d-flex gap-2">
+          <a href="/?active_tab={{ back_cat | urlencode }}"
+             class="btn btn-outline-secondary w-25">{{ t('form_cancel') }}</a>
+          <button type="submit" class="btn btn-primary flex-grow-1 fw-semibold">
+            {{ t('form_save') }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

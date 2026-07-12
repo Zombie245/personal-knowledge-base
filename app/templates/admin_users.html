@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('admin_panel') }}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .role-admin  { background:#dc3545;color:#fff;border-radius:4px;padding:2px 8px;font-size:.8rem; }
+        .role-editor { background:#0d6efd;color:#fff;border-radius:4px;padding:2px 8px;font-size:.8rem; }
+        .role-viewer { background:#6c757d;color:#fff;border-radius:4px;padding:2px 8px;font-size:.8rem; }
+        .perm-editor { background:#0d6efd;color:#fff;border-radius:4px;padding:2px 6px;font-size:.75rem;display:inline-block;margin:1px; }
+        .perm-viewer { background:#6c757d;color:#fff;border-radius:4px;padding:2px 6px;font-size:.75rem;display:inline-block;margin:1px; }
+        .perm-all    { background:#198754;color:#fff;border-radius:4px;padding:2px 6px;font-size:.75rem;display:inline-block;margin:1px; }
+    </style>
+</head>
+<body class="bg-light pb-5">
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/">← {{ t('app_title') }}</a>
+    <span class="text-light">{{ t('admin_panel') }}</span>
+    <a href="/logout" class="btn btn-outline-light btn-sm">{{ t('logout') }}</a>
+  </div>
+</nav>
+<div class="container" style="max-width:980px">
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+      <strong>{{ t('users_list') }}</strong>
+      <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
+        + {{ t('user_create') }}
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-secondary">
+          <tr>
+            <th class="ps-3">#</th>
+            <th>{{ t('user_name') }}</th>
+            <th>{{ t('user_role') }}</th>
+            <th>{{ t('user_lang') }}</th>
+            <th>{{ t('user_permissions') }}</th>
+            <th class="text-end pe-3">{{ t('col_actions') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for user in users %}
+          {% set perms = user.permissions | fromjson %}
+          <tr>
+            <td class="ps-3 text-muted">{{ user.id }}</td>
+            <td><strong>{{ user.username }}</strong></td>
+            <td><span class="role-{{ user.role }}">{{ user.role }}</span></td>
+            <td>{{ user.default_lang | upper }}</td>
+            <td>
+              {% if user.role == 'admin' %}
+                <span class="perm-all">★ {{ t('user_all_access') }}</span>
+              {% elif perms %}
+                {% for cat, lvl in perms.items() %}
+                  <span class="perm-{{ lvl }}">{{ cat }}: {{ lvl }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="text-muted fst-italic">{{ t('user_no_access') }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              <button class="btn btn-sm btn-warning me-1"
+                      data-bs-toggle="modal" data-bs-target="#editModal-{{ user.id }}">{{ t('btn_edit') }}</button>
+              <form action="/admin/users/delete/{{ user.id }}" method="post" class="d-inline"
+                    onsubmit="return confirm('{{ t('user_delete_confirm') }}')">
+                <button type="submit" class="btn btn-sm btn-danger">{{ t('btn_delete') }}</button>
+              </form>
+            </td>
+          </tr>
+
+          <div class="modal fade" id="editModal-{{ user.id }}" tabindex="-1">
+            <div class="modal-dialog modal-lg"><div class="modal-content">
+              <form onsubmit="submitPerms(this,'perms-{{ user.id }}',{{ user.id }})">
+                <input type="hidden" name="permissions_json" value="{{ user.permissions }}">
+                <div class="modal-header">
+                  <h5 class="modal-title">{{ t('user_edit') }}: <strong>{{ user.username }}</strong></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                      <label class="form-label">{{ t('user_role') }}</label>
+                      <select name="role" class="form-select"
+                              onchange="togglePerms(this,'perms-{{ user.id }}')">
+                        <option value="viewer" {% if user.role=='viewer' %}selected{% endif %}>viewer</option>
+                        <option value="editor" {% if user.role=='editor' %}selected{% endif %}>editor</option>
+                        <option value="admin"  {% if user.role=='admin'  %}selected{% endif %}>admin</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ t('user_lang') }}</label>
+                      <select name="default_lang" class="form-select">
+                        <option value="uk" {% if user.default_lang=='uk' %}selected{% endif %}>🇺🇦 Українська</option>
+                        <option value="en" {% if user.default_lang=='en' %}selected{% endif %}>🇬🇧 English</option>
+                        <option value="de" {% if user.default_lang=='de' %}selected{% endif %}>🇩🇪 Deutsch</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">{{ t('user_new_password') }}</label>
+                      <input type="password" name="new_password" class="form-control"
+                             placeholder="{{ t('user_password_hint') }}" autocomplete="new-password">
+                    </div>
+                  </div>
+                  <div id="perms-{{ user.id }}" {% if user.role=='admin' %}style="display:none"{% endif %}>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <label class="fw-bold mb-0">{{ t('user_permissions') }}</label>
+                      <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="setAll('perms-{{ user.id }}','')">{{ t('perm_none') }}</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="setAll('perms-{{ user.id }}','viewer')">{{ t('perm_all_viewer') }}</button>
+                        <button type="button" class="btn btn-outline-primary"
+                                onclick="setAll('perms-{{ user.id }}','editor')">{{ t('perm_all_editor') }}</button>
+                      </div>
+                    </div>
+                    <table class="table table-sm table-bordered mb-0">
+                      <thead class="table-light">
+                        <tr>
+                          <th>{{ t('form_category') }}</th>
+                          <th style="width:110px">{{ t('perm_none') }}</th>
+                          <th style="width:110px">Viewer</th>
+                          <th style="width:110px">Editor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      {% for cat in categories %}
+                        {% set cur = perms.get(cat,'') %}
+                        <tr>
+                          <td>{{ cat }}</td>
+                          <td><input type="radio" class="form-check-input perm-radio" name="ep{{ user.id }}_{{ loop.index }}" data-cat="{{ cat }}" value=""       {% if cur=='' %}checked{% endif %}></td>
+                          <td><input type="radio" class="form-check-input perm-radio" name="ep{{ user.id }}_{{ loop.index }}" data-cat="{{ cat }}" value="viewer" {% if cur=='viewer' %}checked{% endif %}></td>
+                          <td><input type="radio" class="form-check-input perm-radio" name="ep{{ user.id }}_{{ loop.index }}" data-cat="{{ cat }}" value="editor" {% if cur=='editor' %}checked{% endif %}></td>
+                        </tr>
+                      {% endfor %}
+                      {% if not categories %}
+                        <tr><td colspan="4" class="text-muted text-center fst-italic">{{ t('empty_catalog') }}</td></tr>
+                      {% endif %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">{{ t('save_btn') }}</button>
+                </div>
+              </form>
+            </div></div>
+          </div>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white"><strong>{{ t('users_roles_legend') }}</strong></div>
+    <div class="card-body">
+      <p><span class="role-admin">admin</span> — {{ t('role_admin_desc') }}</p>
+      <p><span class="role-editor">editor</span> — {{ t('role_editor_desc') }}</p>
+      <p class="mb-0"><span class="role-viewer">viewer</span> — {{ t('role_viewer_desc') }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <form onsubmit="submitPerms(this,'perms-new','new')">
+      <input type="hidden" name="permissions_json" value="{}">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">+ {{ t('user_create') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-3">
+            <label class="form-label">{{ t('user_name') }}</label>
+            <input type="text" name="username" class="form-control" required autocomplete="off">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ t('login_placeholder') }}</label>
+            <input type="password" name="password" class="form-control" required autocomplete="new-password">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ t('user_role') }}</label>
+            <select name="role" class="form-select" onchange="togglePerms(this,'perms-new')">
+              <option value="viewer">viewer</option>
+              <option value="editor">editor</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ t('user_lang') }}</label>
+            <select name="default_lang" class="form-select">
+              <option value="uk">🇺🇦 UK</option>
+              <option value="en">🇬🇧 EN</option>
+              <option value="de">🇩🇪 DE</option>
+            </select>
+          </div>
+        </div>
+        <div id="perms-new">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="fw-bold mb-0">{{ t('user_permissions') }}</label>
+            <div class="btn-group btn-group-sm">
+              <button type="button" class="btn btn-outline-secondary" onclick="setAll('perms-new','')">{{ t('perm_none') }}</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="setAll('perms-new','viewer')">{{ t('perm_all_viewer') }}</button>
+              <button type="button" class="btn btn-outline-primary"   onclick="setAll('perms-new','editor')">{{ t('perm_all_editor') }}</button>
+            </div>
+          </div>
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>{{ t('form_category') }}</th>
+                <th style="width:110px">{{ t('perm_none') }}</th>
+                <th style="width:110px">Viewer</th>
+                <th style="width:110px">Editor</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for cat in categories %}
+              <tr>
+                <td>{{ cat }}</td>
+                <td><input type="radio" class="form-check-input perm-radio" name="np_{{ loop.index }}" data-cat="{{ cat }}" value=""       checked></td>
+                <td><input type="radio" class="form-check-input perm-radio" name="np_{{ loop.index }}" data-cat="{{ cat }}" value="viewer"></td>
+                <td><input type="radio" class="form-check-input perm-radio" name="np_{{ loop.index }}" data-cat="{{ cat }}" value="editor"></td>
+              </tr>
+            {% endfor %}
+            {% if not categories %}
+              <tr><td colspan="4" class="text-muted text-center fst-italic">{{ t('empty_catalog') }}</td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">{{ t('user_create') }}</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+
+<script>
+function submitPerms(form, blockId, userId) {
+    const block = document.getElementById(blockId);
+    const perms = {};
+    if (block && block.style.display !== 'none') {
+        block.querySelectorAll('.perm-radio:checked').forEach(r => {
+            if (r.value) perms[r.dataset.cat] = r.value;
+        });
+    }
+    form.querySelector('[name="permissions_json"]').value = JSON.stringify(perms);
+    form.action  = userId === 'new' ? '/admin/users/create' : `/admin/users/update/${userId}`;
+    form.method  = 'post';
+    form.onsubmit = null;
+    form.submit();
+}
+function togglePerms(select, blockId) {
+    const block = document.getElementById(blockId);
+    if (block) block.style.display = select.value === 'admin' ? 'none' : '';
+}
+function setAll(blockId, value) {
+    document.getElementById(blockId)
+        ?.querySelectorAll('.perm-radio')
+        .forEach(r => { if (r.value === value) r.checked = true; });
+}
+</script>
+<script src="/static/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+gunicorn
+jinja2
+python-multipart
+itsdangerous
+requests
+bcrypt
+cachetools
