@@ -8,7 +8,14 @@
 </head>
 <body class="bg-dark d-flex align-items-center justify-content-center" style="min-height:100vh;">
     <div class="card shadow" style="width:350px;">
-        <div class="card-body text-center p-4">
+        
+        <div class="d-flex justify-content-end mb-0 gap-2 px-3 pt-3">
+            <a href="/lang/en" class="btn btn-sm btn-outline-secondary {% if request.session.get('lang', 'en') == 'en' %}active{% endif %}">EN</a>
+            <a href="/lang/uk" class="btn btn-sm btn-outline-secondary {% if request.session.get('lang') == 'uk' %}active{% endif %}">UK</a>
+            <a href="/lang/de" class="btn btn-sm btn-outline-secondary {% if request.session.get('lang') == 'de' %}active{% endif %}">DE</a>
+        </div>
+
+        <div class="card-body text-center p-4 pt-2">
             <h4 class="mb-4">{{ t('login_title') }}</h4>
             {% if error %}
                 <div class="alert alert-danger py-2">{{ error }}</div>
