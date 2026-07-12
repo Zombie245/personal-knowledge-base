@@ -27,9 +27,12 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
       <strong>{{ t('users_list') }}</strong>
-      <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
-        + {{ t('user_create') }}
-      </button>
+      <div>
+        <a href="/admin/logs" class="btn btn-sm btn-outline-info me-2">📊 {{ t('sys_logs') }}</a>
+        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#createModal">
+          + {{ t('user_create') }}
+        </button>
+      </div>
     </div>
     <div class="card-body p-0">
       <table class="table table-hover align-middle mb-0">
@@ -256,6 +259,7 @@ function submitPerms(form, blockId, userId) {
     form.onsubmit = null;
     form.submit();
 }
+// Приховування/відображення блоку прав доступу
 function togglePerms(select, blockId) {
     const block = document.getElementById(blockId);
     if (block) block.style.display = select.value === 'admin' ? 'none' : '';

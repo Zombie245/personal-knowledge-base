@@ -1,7 +1,9 @@
 import os
+import logging
 import json
 import sqlite3
 import secrets
+from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, Request, Depends, Response
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +22,32 @@ with open("app/locales/uk.json", encoding="utf-8") as f: _uk = json.load(f)
 with open("app/locales/en.json", encoding="utf-8") as f: _en = json.load(f)
 with open("app/locales/de.json", encoding="utf-8") as f: _de = json.load(f)
 LOCALES = {"uk": _uk, "en": _en, "de": _de}
+# Налаштування автоматичної ротації логів (макс. 5 МБ на файл, зберігаємо максимум 3 копії)
+log_handler = RotatingFileHandler("data/app.log", maxBytes=5*1024*1024, backupCount=3, encoding="utf-8")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[log_handler, logging.StreamHandler()] # Пишемо одночасно у файл і в консоль Docker
+)
+
+# Функція для динамічного встановлення рівня логів із бази даних
+def apply_log_level():
+    try:
+        conn = sqlite3.connect("data/catalog.db")
+        c = conn.cursor()
+        c.execute("SELECT value FROM settings WHERE key = 'log_level'")
+        row = c.fetchone()
+        level_str = row[0] if row else "INFO"
+        conn.close()
+        
+        level = getattr(logging, level_str, logging.INFO)
+        logging.getLogger().setLevel(level)
+    except Exception:
+        logging.getLogger().setLevel(logging.INFO)
+
+# Викликаємо ініціалізацію логів одразу після ініціалізації таблиць бази
+init_db()
+apply_log_level()
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-please")
 

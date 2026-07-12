@@ -1,0 +1,5 @@
+2026-07-12 19:57:18,502 [INFO] Рівень логування успішно змінено користувачем на: DEBUG
+2026-07-12 20:04:35,200 [DEBUG] Using selector: EpollSelector
+2026-07-12 20:04:35,229 [DEBUG] Using selector: EpollSelector
+2026-07-12 20:04:35,233 [DEBUG] Using selector: EpollSelector
+2026-07-12 20:04:35,284 [DEBUG] Using selector: EpollSelector

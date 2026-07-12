@@ -84,5 +84,18 @@
     "status_in_progress": "В процесі",
     "status_updating": "Оновлюється",
     "status_done": "Завершено",
-    "status_abandoned": "Закинуто"
+    "status_abandoned": "Закинуто",
+    "admin_panel_title": "Панель адміністратора",
+    "admin_logs_sub": "Моніторинг та налаштування логів системи",
+    "sys_logs": "Системні логи",
+    "sys_logs_app": "Системні логи додатка",
+    "log_mode": "Режим логів:",
+    "log_empty": "Файл логів порожній або ще не створений...",
+    "log_refresh": "Оновити вікно логів",
+    "manage_users": "Керування користувачами",
+    "back_to_main": "← На головну сторінку",
+    "log_debug": "DEBUG (Максимум інформації)",
+    "log_info": "INFO (Стандартний режим)",
+    "log_warning": "WARNING (Тільки попередження)",
+    "log_error": "ERROR (Тільки критичні помилки)"
 }

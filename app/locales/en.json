@@ -84,5 +84,18 @@
     "status_in_progress": "In progress",
     "status_updating": "Updating",
     "status_done": "Done",
-    "status_abandoned": "Abandoned"
+    "status_abandoned": "Abandoned",
+    "admin_panel_title": "Admin Panel",
+    "admin_logs_sub": "Monitoring and configuration of system logs",
+    "sys_logs": "System Logs",
+    "sys_logs_app": "Application System Logs",
+    "log_mode": "Log Mode:",
+    "log_empty": "Log file is empty or not created yet...",
+    "log_refresh": "Refresh log window",
+    "manage_users": "Manage Users",
+    "back_to_main": "← To main page",
+    "log_debug": "DEBUG (Maximum information)",
+    "log_info": "INFO (Standard mode)",
+    "log_warning": "WARNING (Warnings only)",
+    "log_error": "ERROR (Critical errors only)"
 }

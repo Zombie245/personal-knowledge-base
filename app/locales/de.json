@@ -84,5 +84,18 @@
     "status_in_progress": "In Bearbeitung",
     "status_updating": "Wird aktualisiert",
     "status_done": "Abgeschlossen",
-    "status_abandoned": "Abgebrochen"
+    "status_abandoned": "Abgebrochen",
+    "admin_panel_title": "Admin-Bereich",
+    "admin_logs_sub": "Überwachung und Konfiguration der Systemprotokolle",
+    "sys_logs": "Systemprotokolle",
+    "sys_logs_app": "Anwendungs-Systemprotokolle",
+    "log_mode": "Protokollmodus:",
+    "log_empty": "Protokolldatei ist leer oder noch nicht erstellt...",
+    "log_refresh": "Protokollfenster aktualisieren",
+    "manage_users": "Benutzerverwaltung",
+    "back_to_main": "← Zur Hauptseite",
+    "log_debug": "DEBUG (Maximale Information)",
+    "log_info": "INFO (Standardmodus)",
+    "log_warning": "WARNING (Nur Warnungen)",
+    "log_error": "ERROR (Nur kritische Fehler)"
 }

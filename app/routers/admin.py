@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Request, Depends, UploadFile, File, Form
-from fastapi.responses import RedirectResponse, FileResponse
-import sqlite3
+# Версія скрипта: 11.5
 import os
-import shutil
-import zipfile
 import json
+import logging
+import shutil
+import sqlite3
+import zipfile
 import urllib.parse
 from datetime import datetime
+from fastapi import APIRouter, Request, Depends, UploadFile, File, Form
+from fastapi.responses import RedirectResponse, FileResponse
 from app.db import get_db, init_db
-from app.auth_manager import require_role
+from app.auth_manager import get_current_user, require_role
+from app.templates_config import render
 
 router = APIRouter()
 
@@ -78,3 +81,49 @@ def move_tab(
     c.executemany("INSERT INTO tab_order VALUES (?,?)", [(cat, i * 10) for i, cat in enumerate(cats)])
     db.commit()
     return RedirectResponse(url=f"/?active_tab={urllib.parse.quote(category)}", status_code=303)
+
+@router.get("/admin/logs")
+def view_logs(request: Request, db: sqlite3.Connection = Depends(get_db)):
+    # Викликаємо перевірку користувача вручну через передачу поточного з'єднання бази
+    user = get_current_user(request, db)
+    if not user or user["role"] != "admin":
+        return RedirectResponse("/login", status_code=303)
+    
+    # Читаємо лише останні 100 рядків із файлу логів
+    log_content = ""
+    log_path = "data/app.log"
+    if os.path.exists(log_path):
+        with open(log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            log_content = "".join(lines[-100:])
+    
+    # Використовуємо вже відкрите з'єднання db для отримання рівня логів
+    c = db.cursor()
+    c.execute("SELECT value FROM settings WHERE key = 'log_level'")
+    row = c.fetchone()
+    current_level = row[0] if row else "INFO"
+    
+    return render(request, "admin.html", {
+        "request": request,
+        "logs": log_content,
+        "current_level": current_level,
+        "user": user
+    })
+
+@router.post("/admin/logs/level")
+def set_log_level(request: Request, level: str = Form(...), db: sqlite3.Connection = Depends(get_db)):
+    # Перевіряємо права доступу користувача
+    user = get_current_user(request, db)
+    if not user or user["role"] != "admin":
+        return RedirectResponse("/login", status_code=303)
+        
+    if level in ["DEBUG", "INFO", "WARNING", "ERROR"]:
+        c = db.cursor()
+        c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('log_level', ?)", (level,))
+        db.commit()
+        
+        # Застосовуємо рівень логування до поточного процесу
+        logging.getLogger().setLevel(getattr(logging, level))
+        logging.info(f"Рівень логування успішно змінено користувачем на: {level}")
+        
+    return RedirectResponse("/admin/logs", status_code=303)

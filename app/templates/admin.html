@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('admin_panel_title') }} | {{ t('sys_logs') }}</title>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light py-4">
+    <div class="container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <div>
+                <h2 class="mb-0 text-info">{{ t('admin_panel_title') }}</h2>
+                <small class="text-secondary">{{ t('admin_logs_sub') }}</small>
+            </div>
+            <div>
+                <a href="/admin/users" class="btn btn-outline-info btn-sm me-2">👥 {{ t('manage_users') }}</a>
+                <a href="/" class="btn btn-outline-light btn-sm">{{ t('back_to_main') }}</a>
+            </div>
+        </div>
+
+        <div class="card bg-dark text-light border-secondary shadow">
+            <div class="card-header border-secondary d-flex justify-content-between align-items-center bg-secondary bg-opacity-25">
+                <h5 class="mb-0">{{ t('sys_logs_app') }}</h5>
+                
+                <form action="/admin/logs/level" method="post" class="d-flex align-items-center gap-2">
+                    <label for="levelSelect" class="text-nowrap mb-0 small text-secondary">{{ t('log_mode') }}</label>
+                    <select name="level" id="levelSelect" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="this.form.submit()">
+                        <option value="DEBUG" {% if current_level == 'DEBUG' %}selected{% endif %}>{{ t('log_debug') }}</option>
+                        <option value="INFO" {% if current_level == 'INFO' %}selected{% endif %}>{{ t('log_info') }}</option>
+                        <option value="WARNING" {% if current_level == 'WARNING' %}selected{% endif %}>{{ t('log_warning') }}</option>
+                        <option value="ERROR" {% if current_level == 'ERROR' %}selected{% endif %}>{{ t('log_error') }}</option>
+                    </select>
+                </form>
+            </div>
+            <div class="card-body p-2 bg-black">
+                <textarea class="form-control bg-black text-success font-monospace small border-0" rows="20" readonly style="resize: none;">{{ logs if logs else t('log_empty') }}</textarea>
+            </div>
+            <div class="card-footer border-secondary bg-transparent d-flex justify-content-end p-2">
+                <a href="/admin/logs" class="btn btn-sm btn-outline-info">{{ t('log_refresh') }}</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

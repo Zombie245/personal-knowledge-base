@@ -39,7 +39,11 @@ def init_db():
         category   TEXT PRIMARY KEY,
         sort_index INTEGER DEFAULT 0
     )''')
-
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    )""")
     c.execute('''CREATE TABLE IF NOT EXISTS users (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
         username      TEXT UNIQUE NOT NULL,
@@ -56,6 +60,7 @@ def init_db():
             "INSERT INTO users (username, password_hash, role, default_lang) VALUES (?, ?, ?, ?)",
             ("admin", hashed.decode(), "admin", "uk")
         )
+    c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('log_level', 'INFO')")
 
     conn.commit()
     conn.close()
