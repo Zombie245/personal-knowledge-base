@@ -1,6 +1,7 @@
 import os
 import json
 import sqlite3
+import secrets
 from fastapi import FastAPI, Request, Depends, Response
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,6 +11,10 @@ from app.db import get_db, init_db
 from app.auth_manager import get_current_user
 from app.templates_config import render
 from app.routers import auth, categories, items, admin, users
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
 
 with open("app/locales/uk.json", encoding="utf-8") as f: _uk = json.load(f)
 with open("app/locales/en.json", encoding="utf-8") as f: _en = json.load(f)
@@ -30,11 +35,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class I18nMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        lang = request.session.get("lang", "uk")
-        locale = LOCALES.get(lang, _uk)
-        request.state.t    = lambda key: locale.get(key, key)
-        request.state.lang = lang
-        return await call_next(request)
+        # Англійська мова використовується за замовчуванням, якщо в сесії нічого не задано
+        lang = request.session.get("lang", "en")
+        locale_dict = LOCALES.get(lang, _en)
+        request.state.lang = lang       
+        request.state.t = lambda key: locale_dict.get(key, key)
+        response = await call_next(request)
+        return response
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(I18nMiddleware)
