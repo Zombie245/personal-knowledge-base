@@ -49,7 +49,7 @@ def apply_log_level():
 init_db()
 apply_log_level()
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-please")
+#SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-please") old
 
 app = FastAPI(docs_url=None, redoc_url=None)
 
