@@ -78,7 +78,7 @@
     "form_ratings_hint": "Kriterium | Punkte (1–10) — einer pro Zeile.",
     "form_icon": "Icon",
     "form_icon_delete": "Icon löschen",
-    "form_icon_hint": "PNG, JPG, ICO, SVG. Empfohlen 64×64 px.",
+    "form_icon_hint": "PNG, JPG, ICO. Empfohlen 64×64 px.",
     "form_cancel": "Abbrechen",
     "status_none": "— kein Status —",
     "status_in_progress": "In Bearbeitung",

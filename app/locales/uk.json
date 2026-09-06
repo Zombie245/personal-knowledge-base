@@ -78,7 +78,7 @@
     "form_ratings_hint": "Критерій | Оцінка (1–10) — по одному на рядок.",
     "form_icon": "Іконка",
     "form_icon_delete": "Видалити іконку",
-    "form_icon_hint": "PNG, JPG, ICO, SVG. Рекомендовано 64×64 px.",
+    "form_icon_hint": "PNG, JPG, ICO. Рекомендовано 64×64 px.",
     "form_cancel": "Скасувати",
     "status_none": "— без статусу —",
     "status_in_progress": "В процесі",

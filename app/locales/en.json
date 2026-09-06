@@ -78,7 +78,7 @@
     "form_ratings_hint": "Metric | Score (1–10) — one per line.",
     "form_icon": "Icon",
     "form_icon_delete": "Delete icon",
-    "form_icon_hint": "PNG, JPG, ICO, SVG. Recommended 64×64 px.",
+    "form_icon_hint": "PNG, JPG, ICO. Recommended 64×64 px.",
     "form_cancel": "Cancel",
     "status_none": "— no status —",
     "status_in_progress": "In progress",
