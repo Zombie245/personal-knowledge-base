@@ -74,7 +74,7 @@
     "form_links_placeholder": "GitHub | https://github.com/user/repo",
     "form_links_hint": "Назва | URL — по одному на рядок.",
     "form_ratings": "Рейтинги",
-    "form_ratings_placeholder": "Сюжет | 8\nГрафіка | 7\nТривалість | 6",
+    "form_ratings_placeholder": "Сюжет | 8\nГрафіка | 7\nКористь | 6",
     "form_ratings_hint": "Критерій | Оцінка (1–10) — по одному на рядок.",
     "form_icon": "Іконка",
     "form_icon_delete": "Видалити іконку",

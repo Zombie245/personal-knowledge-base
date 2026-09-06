@@ -6,6 +6,7 @@ import urllib.parse
 import requests
 import os
 import shutil
+from typing import List
 from app.db import get_db
 from app.auth_manager import require_role, get_tab_role
 from app.templates_config import render, get_categories
@@ -38,6 +39,11 @@ def edit_form(request: Request, item_id: int, db: sqlite3.Connection = Depends(g
     _assert_can_edit(request, db, item["category"])
     item["links_text"]   = unparse_links(item["links"])
     item["ratings_text"] = unparse_ratings(item["ratings"])
+    
+    # Вибірка скріншотів для редагування
+    c.execute("SELECT id, filename FROM item_screenshots WHERE item_id = ?", (item_id,))
+    item["screenshots"] = [dict(r) for r in c.fetchall()]
+    
     return render(request, "form.html", {"item": item, "categories": get_categories(c)})
 
 @router.post("/save", dependencies=[Depends(require_role(["admin", "editor"]))])
@@ -56,7 +62,9 @@ async def save_item(
     links_text: str       = Form(""),
     ratings_text: str     = Form(""),
     icon_upload: UploadFile = File(None),
-    delete_icon: bool     = Form(False)
+    delete_icon: bool     = Form(False),
+    screenshots_upload: List[UploadFile] = File(None),
+    delete_screenshots: List[int] = Form(None)
 ):
     _assert_can_edit(request, db, category)
 
@@ -87,12 +95,48 @@ async def save_item(
                 "links=?,ratings=?,opinion=?,install_instructions=? WHERE id=?",
                 (*fields, item_id)
             )
+        target_id = item_id
     else:
         c.execute(
             "INSERT INTO items (category,name,version,status,tags,description,"
             "links,ratings,opinion,install_instructions,icon_file) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (*fields, icon_filename or "")
         )
+        target_id = c.lastrowid
+
+    # Видалення позначених скріншотів
+    if delete_screenshots:
+        for scr_id in delete_screenshots:
+            c.execute("SELECT filename FROM item_screenshots WHERE id = ?", (scr_id,))
+            scr_row = c.fetchone()
+            if scr_row:
+                file_p = os.path.join("data/screenshots", scr_row[0])
+                if os.path.exists(file_p):
+                    try:
+                        os.remove(file_p)
+                    except OSError:
+                        pass
+                c.execute("DELETE FROM item_screenshots WHERE id = ?", (scr_id,))
+
+    # Збереження нових скріншотів (максимум 10 на запис)
+    if screenshots_upload:
+        c.execute("SELECT COUNT(*) FROM item_screenshots WHERE item_id = ?", (target_id,))
+        existing_count = c.fetchone()[0]
+
+        for file in screenshots_upload:
+            if existing_count >= 10:
+                break
+            if file and file.filename:
+                safe_name = safe_icon_filename(file.filename, f"scr_{target_id}")
+                if safe_name:
+                    file_path = os.path.join("data/screenshots", safe_name)
+                    with open(file_path, "wb") as buf:
+                        shutil.copyfileobj(file.file, buf)
+                    c.execute(
+                        "INSERT INTO item_screenshots (item_id, filename) VALUES (?, ?)",
+                        (target_id, safe_name)
+                    )
+                    existing_count += 1
 
     db.commit()
     return RedirectResponse(url=f"/?active_tab={urllib.parse.quote(category)}", status_code=303)
@@ -106,6 +150,18 @@ def delete_item(request: Request, item_id: int, db: sqlite3.Connection = Depends
         raise HTTPException(status_code=404)
     cat = row[0]
     _assert_can_edit(request, db, cat)
+
+    # Видаляємо файли скріншотів з диска при видаленні запису
+    c.execute("SELECT filename FROM item_screenshots WHERE item_id = ?", (item_id,))
+    for scr in c.fetchall():
+        file_p = os.path.join("data/screenshots", scr["filename"])
+        if os.path.exists(file_p):
+            try:
+                os.remove(file_p)
+            except OSError:
+                pass
+
+    c.execute("DELETE FROM item_screenshots WHERE item_id = ?", (item_id,))
     c.execute("DELETE FROM items WHERE id = ?", (item_id,))
     db.commit()
     return RedirectResponse(url=f"/?active_tab={urllib.parse.quote(cat)}", status_code=303)

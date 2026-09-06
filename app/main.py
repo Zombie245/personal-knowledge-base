@@ -5,7 +5,7 @@ import sqlite3
 import secrets
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI, Request, Depends, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -22,15 +22,14 @@ with open("app/locales/uk.json", encoding="utf-8") as f: _uk = json.load(f)
 with open("app/locales/en.json", encoding="utf-8") as f: _en = json.load(f)
 with open("app/locales/de.json", encoding="utf-8") as f: _de = json.load(f)
 LOCALES = {"uk": _uk, "en": _en, "de": _de}
-# Налаштування автоматичної ротації логів (макс. 5 МБ на файл, зберігаємо максимум 3 копії)
+
 log_handler = RotatingFileHandler("data/app.log", maxBytes=5*1024*1024, backupCount=3, encoding="utf-8")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[log_handler, logging.StreamHandler()] # Пишемо одночасно у файл і в консоль Docker
+    handlers=[log_handler, logging.StreamHandler()]
 )
 
-# Функція для динамічного встановлення рівня логів із бази даних
 def apply_log_level():
     try:
         conn = sqlite3.connect("data/catalog.db")
@@ -45,11 +44,8 @@ def apply_log_level():
     except Exception:
         logging.getLogger().setLevel(logging.INFO)
 
-# Викликаємо ініціалізацію логів одразу після ініціалізації таблиць бази
 init_db()
 apply_log_level()
-
-#SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-please") old
 
 app = FastAPI(docs_url=None, redoc_url=None)
 
@@ -63,7 +59,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class I18nMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Англійська мова використовується за замовчуванням, якщо в сесії нічого не задано
         lang = request.session.get("lang", "en")
         locale_dict = LOCALES.get(lang, _en)
         request.state.lang = lang       
@@ -76,7 +71,7 @@ app.add_middleware(I18nMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=86400)
 
 app.mount("/icons", StaticFiles(directory="data/icons"), name="icons")
-# Підключення локальних статичних файлів (Bootstrap)
+app.mount("/screenshots", StaticFiles(directory="data/screenshots"), name="screenshots")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 init_db()
@@ -86,6 +81,13 @@ app.include_router(categories.router)
 app.include_router(items.router)
 app.include_router(admin.router)
 app.include_router(users.router)
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    icon_path = "app/static/favicon.ico"
+    if os.path.exists(icon_path):
+        return FileResponse(icon_path)
+    return Response(status_code=204)
 
 @app.get("/lang/{lang_code}")
 def set_lang(request: Request, lang_code: str, active_tab: str = None):
@@ -111,6 +113,12 @@ def read_root(
     c.execute("SELECT category FROM tab_order ORDER BY sort_index")
     ordered = [r[0] for r in c.fetchall()]
 
+    c.execute("SELECT * FROM item_screenshots")
+    all_screenshots = c.fetchall()
+    screenshots_by_item = {}
+    for s in all_screenshots:
+        screenshots_by_item.setdefault(s["item_id"], []).append(s["filename"])
+
     c.execute("SELECT * FROM items ORDER BY name")
     categorized = {}
     all_metrics  = set()
@@ -125,6 +133,7 @@ def read_root(
         d["links"]       = json.loads(d["links"])   if d["links"]   else []
         d["ratings"]     = json.loads(d["ratings"]) if d["ratings"] else []
         d["parsed_tags"] = [t.strip() for t in d.get("tags", "").split(",") if t.strip()]
+        d["screenshots"] = screenshots_by_item.get(d["id"], [])
 
         for r in d["ratings"]:
             all_metrics.add(r["metric"])

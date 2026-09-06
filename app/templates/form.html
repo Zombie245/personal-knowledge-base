@@ -144,6 +144,30 @@
           </div>
         </div>
 
+        {# ── Скріншоти ── #}
+        <div class="mb-4 p-3 bg-white rounded border">
+          <label class="form-label fw-semibold">Скріншоти (до 10 шт)</label>
+          <input type="file" name="screenshots_upload" class="form-control form-control-sm mb-2" multiple accept="image/*">
+          <div class="field-hint">Можна вибрати декілька зображень одразу.</div>
+
+          {% if item and item.screenshots %}
+          <div class="mt-3">
+            <label class="form-label small fw-semibold text-muted">Існуючі скріншоти (позначте для видалення):</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for scr in item.screenshots %}
+              <div class="border rounded p-2 text-center bg-light">
+                <img src="/screenshots/{{ scr.filename }}" style="height:80px;width:auto;object-fit:cover;" class="d-block mb-1 rounded border">
+                <div class="form-check d-inline-block">
+                  <input type="checkbox" name="delete_screenshots" value="{{ scr.id }}" class="form-check-input" id="scr_{{ scr.id }}">
+                  <label class="form-check-label text-danger small" for="scr_{{ scr.id }}">Видалити</label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        
         {# ── Кнопки ── #}
         <div class="d-flex gap-2">
           <a href="/?active_tab={{ back_cat | urlencode }}"

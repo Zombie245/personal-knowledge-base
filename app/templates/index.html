@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ t('app_title') }}</title>
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <style>
         .tag-badge  { background:#2c3e50;color:#fff;border-radius:4px;padding:3px 6px;font-size:.8rem;margin-right:4px;display:inline-block;cursor:pointer;transition:.2s; }
         .tag-badge:hover,.tag-active { background:#1abc9c !important; }
@@ -201,6 +203,7 @@
             </td>
           </tr>
 
+          {# ── Модальне вікно деталей з підтримкою каруселі скріншотів ── #}
           <div class="modal fade" id="modal-{{ item.id }}" tabindex="-1">
             <div class="modal-dialog modal-lg"><div class="modal-content">
               <div class="modal-header">
@@ -211,6 +214,40 @@
                 {% if item.description %}
                 <p><strong>{{ t('modal_desc') }}:</strong><br>{{ item.description }}</p>
                 {% endif %}
+
+                {# ── Слайдер скріншотів (Steam Style) ── #}
+                {% if item.screenshots %}
+                <div class="mb-3">
+                  <strong>Скріншоти:</strong>
+                  <div class="swiper mySwiper-{{ item.id }} mt-2 bg-dark rounded p-2" style="width:100%; height:320px;">
+                    <div class="swiper-wrapper">
+                      {% for scr in item.screenshots %}
+                      <div class="swiper-slide text-center d-flex align-items-center justify-content-center">
+                        <a href="/screenshots/{{ scr }}" target="_blank">
+                          <img src="/screenshots/{{ scr }}" style="max-width:100%; max-height:300px; object-fit:contain;" class="rounded">
+                        </a>
+                      </div>
+                      {% endfor %}
+                    </div>
+                    <div class="swiper-button-next text-white"></div>
+                    <div class="swiper-button-prev text-white"></div>
+                    <div class="swiper-pagination"></div>
+                  </div>
+                </div>
+                <script>
+                  document.getElementById('modal-{{ item.id }}').addEventListener('shown.bs.modal', function () {
+                    if (!this.swiperInitialized) {
+                      new Swiper('.mySwiper-{{ item.id }}', {
+                        loop: true,
+                        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                        pagination: { el: '.swiper-pagination', clickable: true },
+                      });
+                      this.swiperInitialized = true;
+                    }
+                  });
+                </script>
+                {% endif %}
+
                 {% if item.opinion %}
                 <p><strong>{{ t('modal_opinion') }}:</strong><br>{{ item.opinion }}</p>
                 {% endif %}

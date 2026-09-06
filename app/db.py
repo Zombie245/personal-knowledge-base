@@ -16,6 +16,7 @@ def get_db():
 
 def init_db():
     os.makedirs("data", exist_ok=True)
+    os.makedirs("data/screenshots", exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute('PRAGMA journal_mode=WAL;')
     c = conn.cursor()
@@ -39,6 +40,14 @@ def init_db():
         category   TEXT PRIMARY KEY,
         sort_index INTEGER DEFAULT 0
     )''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS item_screenshots (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id  INTEGER NOT NULL,
+    filename TEXT NOT NULL,
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+    )''')
+
     c.execute("""
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
