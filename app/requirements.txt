@@ -7,3 +7,4 @@ itsdangerous
 requests
 bcrypt
 cachetools
+pillow

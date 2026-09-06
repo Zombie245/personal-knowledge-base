@@ -35,7 +35,7 @@ def unparse_ratings(json_str: str) -> str:
         return ""
     return '\n'.join(f"{r['metric']} | {r['score']}" for r in json.loads(json_str))
 
-ALLOWED_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.svg'}
+ALLOWED_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico'}
 
 def safe_icon_filename(original: str, prefix: str) -> str | None:
     import os

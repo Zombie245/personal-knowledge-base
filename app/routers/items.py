@@ -7,17 +7,38 @@ import requests
 import os
 import shutil
 from typing import List
+from PIL import Image
 from app.db import get_db
 from app.auth_manager import require_role, get_tab_role
 from app.templates_config import render, get_categories
 from app.utils import parse_links, parse_ratings, unparse_links, unparse_ratings, safe_icon_filename
 
 router = APIRouter()
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 
 def _assert_can_edit(request: Request, db: sqlite3.Connection, category: str):
     """Серверна перевірка: чи має користувач права editor на цю вкладку."""
     if get_tab_role(request, db, category) != "editor":
         raise HTTPException(status_code=403, detail="Access Denied")
+
+def _is_valid_image(file: UploadFile, max_size: int = MAX_FILE_SIZE) -> bool:
+    """Перевіряє розмір файлу та його цілісність через Pillow."""
+    try:
+        # Перевірка розміру
+        file.file.seek(0, os.SEEK_END)
+        size = file.file.tell()
+        file.file.seek(0)
+        if size > max_size or size == 0:
+            return False
+
+        # Валідація структури зображення
+        img = Image.open(file.file)
+        img.verify()
+        file.file.seek(0)
+        return True
+    except Exception:
+        file.file.seek(0)
+        return False
 
 @router.get("/add", dependencies=[Depends(require_role(["admin", "editor"]))])
 def add_form(request: Request, category: str = "Загальне", db: sqlite3.Connection = Depends(get_db)):
@@ -71,7 +92,7 @@ async def save_item(
     icon_filename = None
     if delete_icon:
         icon_filename = ""
-    elif icon_upload and icon_upload.filename:
+    elif icon_upload and icon_upload.filename and _is_valid_image(icon_upload):
         safe = safe_icon_filename(icon_upload.filename, f"custom_{item_id or 'new'}")
         if safe:
             icon_filename = safe
@@ -118,7 +139,7 @@ async def save_item(
                         pass
                 c.execute("DELETE FROM item_screenshots WHERE id = ?", (scr_id,))
 
-    # Збереження нових скріншотів (максимум 10 на запис)
+    # Збереження нових скріншотів (максимум 10 на запис з перевіркою валідності)
     if screenshots_upload:
         c.execute("SELECT COUNT(*) FROM item_screenshots WHERE item_id = ?", (target_id,))
         existing_count = c.fetchone()[0]
@@ -126,7 +147,7 @@ async def save_item(
         for file in screenshots_upload:
             if existing_count >= 10:
                 break
-            if file and file.filename:
+            if file and file.filename and _is_valid_image(file):
                 safe_name = safe_icon_filename(file.filename, f"scr_{target_id}")
                 if safe_name:
                     file_path = os.path.join("data/screenshots", safe_name)
@@ -151,7 +172,6 @@ def delete_item(request: Request, item_id: int, db: sqlite3.Connection = Depends
     cat = row[0]
     _assert_can_edit(request, db, cat)
 
-    # Видаляємо файли скріншотів з диска при видаленні запису
     c.execute("SELECT filename FROM item_screenshots WHERE item_id = ?", (item_id,))
     for scr in c.fetchall():
         file_p = os.path.join("data/screenshots", scr["filename"])
